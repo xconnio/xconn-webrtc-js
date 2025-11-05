@@ -1,0 +1,26 @@
+{
+  "type": "module",
+  "name": "xconn-webrtc-js",
+  "version": "1.0.0",
+  "description": "XConn WebRTC JS",
+  "main": "ts-built/index.js",
+  "exports": {
+    "import": "./ts-built/index.js",
+    "require": "./ts-built/index.cjs",
+    "types": "./ts-built/index.d.ts"
+  },
+  "types": "ts-built/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "format": "eslint . --ext .ts --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3"
+  },
+  "author": "Mahad Munir <mahad@xconn.io>",
+  "license": "MIT"
+}
