@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "es2017",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "outDir": "ts-built",
+    "rootDir": "./lib",
+    "declaration": true,
+    "moduleResolution": "node"
+  },
+  "include": [
+    "lib/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "ts-built",
+    "**/*.test.ts"
+  ]
+}
