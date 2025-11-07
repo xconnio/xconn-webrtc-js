@@ -12,3 +12,6 @@ format:
 
 build:
 	npm run build
+
+run:
+	npx vite

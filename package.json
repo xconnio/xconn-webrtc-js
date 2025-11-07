@@ -4,22 +4,23 @@
   "version": "1.0.0",
   "description": "XConn WebRTC JS",
   "main": "ts-built/index.js",
-  "exports": {
-    "import": "./ts-built/index.js",
-    "require": "./ts-built/index.cjs",
-    "types": "./ts-built/index.d.ts"
-  },
   "types": "ts-built/index.d.ts",
   "scripts": {
     "build": "tsc",
     "lint": "eslint . --ext .ts",
     "format": "eslint . --ext .ts --fix"
   },
+  "dependencies": {
+    "uuid": "^13.0.0",
+    "wampproto": "https://github.com/xconnio/wampproto-js.git#18d306739329ed5544800fb0a9c01fb707f4162b",
+    "xconn": "https://github.com/xconnio/xconn-js.git#a5eb6fb65f955c4a995354815ff5a4a84b937808"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3"
+    "typescript-eslint": "^8.46.3",
+    "vite": "^7.2.1"
   },
   "author": "Mahad Munir <mahad@xconn.io>",
   "license": "MIT"
