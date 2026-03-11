@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
     "module": "ESNext",
-    "target": "es2017",
+    "target": "es2018",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "outDir": "ts-built",
+    "outDir": "dist",
     "rootDir": "./lib",
     "declaration": true,
     "moduleResolution": "node"
@@ -15,7 +15,7 @@
   ],
   "exclude": [
     "node_modules",
-    "ts-built",
+    "dist",
     "**/*.test.ts"
   ]
 }
