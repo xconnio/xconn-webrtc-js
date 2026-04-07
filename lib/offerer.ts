@@ -6,6 +6,8 @@ export class Offerer {
     private connection?: RTCPeerConnection;
     private readonly channelPromise: Promise<RTCDataChannel>;
     private channelResolve!: (channel: RTCDataChannel) => void;
+    private pendingCandidates: RTCIceCandidateInit[] = [];
+    private publishICECandidate?: (candidate: RTCIceCandidateInit) => Promise<void>;
 
     constructor() {
         this.channelPromise = new Promise((resolve) => {
@@ -21,7 +23,7 @@ export class Offerer {
         const pc = new RTCPeerConnection(config);
         this.connection = pc;
 
-        const cachedCandidates: RTCIceCandidateInit[] = [];
+        const initialCandidates: RTCIceCandidateInit[] = [];
         let batching = true;
 
         // after 200ms stop batching
@@ -42,8 +44,11 @@ export class Offerer {
             const candidateData = event.candidate.toJSON();
 
             if (batching) {
-                cachedCandidates.push(candidateData);
+                initialCandidates.push(candidateData);
+                return;
             }
+
+            await this.handleICECandidate(candidateData);
         };
 
         pc.onconnectionstatechange = () => {
@@ -67,22 +72,24 @@ export class Offerer {
         // wait for initial candidate gathering window
         await batchingPromise;
 
-        return {description: offer, candidates: cachedCandidates};
+        return {description: offer, candidates: initialCandidates};
     }
 
-    startICETrickle(session: Session, topic: string, requestID: string): void {
+    async startICETrickle(session: Session, topic: string, requestID: string): Promise<void> {
         if (!this.connection) {
             throw new Error("Connection not initialized");
         }
 
-        this.connection.onicecandidate = async (event) => {
-            if (!event.candidate) {
-                return;
-            }
-
-            const candidateData = event.candidate.toJSON();
-            await session.publish(topic, [requestID, candidateData]);
+        this.publishICECandidate = async (candidate) => {
+            await session.publish(topic, [requestID, candidate]);
         };
+
+        const pendingCandidates = this.pendingCandidates;
+        this.pendingCandidates = [];
+
+        for (const candidate of pendingCandidates) {
+            await this.publishICECandidate(candidate);
+        }
     }
 
     async handleAnswer(answer: Answer): Promise<void> {
@@ -119,5 +126,14 @@ export class Offerer {
         }
 
         return this.connection;
+    }
+
+    private async handleICECandidate(candidate: RTCIceCandidateInit): Promise<void> {
+        if (!this.publishICECandidate) {
+            this.pendingCandidates.push(candidate);
+            return;
+        }
+
+        await this.publishICECandidate(candidate);
     }
 }
