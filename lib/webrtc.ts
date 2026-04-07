@@ -1,13 +1,11 @@
-import { v4 } from "uuid";
 import {Event, Session, getSubProtocol, joinPeer} from "xconn";
 
 import {WebRTCPeer} from "./peer";
 import {Offerer} from "./offerer";
-import {ClientConfig, Offer, OfferConfig} from "./types";
+import {ClientConfig, Offer, OfferConfig, OfferResponse} from "./types";
 
 export async function connectWebRTC(config: ClientConfig) {
     const offerer = new Offerer();
-    const requestId = v4();
 
     const offerConfig = new OfferConfig(
         getSubProtocol(config.serializer),
@@ -17,7 +15,7 @@ export async function connectWebRTC(config: ClientConfig) {
         config.topicAnswererOnCandidate
     );
 
-    const offer: Offer = await offerer.offer(offerConfig, config.session, requestId);
+    const offer: Offer = await offerer.offer(offerConfig);
 
     await config.session.subscribe(config.topicOffererOnCandidate, async (event: Event) => {
         if (event.args.length < 2) {
@@ -30,10 +28,15 @@ export async function connectWebRTC(config: ClientConfig) {
     });
 
     const offerJSON = JSON.stringify({"description": offer.description, "candidates": offer.candidates})
-    const callResult = await config.session.call(config.procedureWebRTCOffer, [requestId, offerJSON]);
+    const callResult = await config.session.call(config.procedureWebRTCOffer, [offerJSON]);
 
-    const answer = JSON.parse(callResult.args[0]);
-    await offerer.handleAnswer(answer);
+    const offerResponse = JSON.parse(callResult.args[0] as string) as OfferResponse;
+    if (!offerResponse.requestID) {
+        throw new Error("Offer response request ID must not be empty");
+    }
+
+    offerer.startICETrickle(config.session, offerConfig.topicAnswererOnCandidate, offerResponse.requestID);
+    await offerer.handleAnswer(offerResponse.answer);
 
     const channel = await offerer.waitReady();
 

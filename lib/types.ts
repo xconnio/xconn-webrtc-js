@@ -7,6 +7,11 @@ export interface Offer {
 
 export type Answer = Offer;
 
+export interface OfferResponse {
+    requestID: string;
+    answer: Answer;
+}
+
 export class OfferConfig {
     constructor(
         public readonly protocol: string,

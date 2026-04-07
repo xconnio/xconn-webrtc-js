@@ -13,7 +13,7 @@ export class Offerer {
         });
     }
 
-    async offer(offerConfig: OfferConfig, session: Session, requestID: string): Promise<Offer> {
+    async offer(offerConfig: OfferConfig): Promise<Offer> {
         const config: RTCConfiguration = {
             iceServers: offerConfig.iceServers,
         };
@@ -43,8 +43,6 @@ export class Offerer {
 
             if (batching) {
                 cachedCandidates.push(candidateData);
-            } else {
-                await session.publish(offerConfig.topicAnswererOnCandidate, [requestID, candidateData]);
             }
         };
 
@@ -70,6 +68,21 @@ export class Offerer {
         await batchingPromise;
 
         return {description: offer, candidates: cachedCandidates};
+    }
+
+    startICETrickle(session: Session, topic: string, requestID: string): void {
+        if (!this.connection) {
+            throw new Error("Connection not initialized");
+        }
+
+        this.connection.onicecandidate = async (event) => {
+            if (!event.candidate) {
+                return;
+            }
+
+            const candidateData = event.candidate.toJSON();
+            await session.publish(topic, [requestID, candidateData]);
+        };
     }
 
     async handleAnswer(answer: Answer): Promise<void> {

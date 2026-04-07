@@ -30,8 +30,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "rollup": "^4.59.0",
-    "rollup-plugin-dts": "^6.3.0",
-    "uuid": "^13.0.0"
+    "rollup-plugin-dts": "^6.3.0"
   },
   "peerDependencies": {
     "xconn": "^0.1.1"
