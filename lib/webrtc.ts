@@ -35,7 +35,7 @@ export async function connectWebRTC(config: ClientConfig) {
         throw new Error("Offer response request ID must not be empty");
     }
 
-    offerer.startICETrickle(config.session, offerConfig.topicAnswererOnCandidate, offerResponse.requestID);
+    await offerer.startICETrickle(config.session, offerConfig.topicAnswererOnCandidate, offerResponse.requestID);
     await offerer.handleAnswer(offerResponse.answer);
 
     const channel = await offerer.waitReady();
