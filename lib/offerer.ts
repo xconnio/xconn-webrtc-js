@@ -62,6 +62,8 @@ export class Offerer {
         });
         dataChannel.binaryType = "arraybuffer";
 
+        // This is the first data channel created on the connection, so it is the
+        // WAMP channel by convention; no handshake is needed to identify it as such.
         dataChannel.onopen = () => {
             this.channelResolve(dataChannel);
         };
