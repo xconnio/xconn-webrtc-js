@@ -2,9 +2,10 @@ import {Event, Session, getSubProtocol, joinPeer} from "xconn";
 
 import {WebRTCPeer} from "./peer";
 import {Offerer} from "./offerer";
+import {WebRTCSession} from "./session";
 import {ClientConfig, Offer, OfferConfig, OfferResponse} from "./types";
 
-export async function connectWebRTC(config: ClientConfig) {
+export async function connectWebRTC(config: ClientConfig): Promise<WebRTCSession> {
     const offerer = new Offerer();
 
     const offerConfig = new OfferConfig(
@@ -40,13 +41,13 @@ export async function connectWebRTC(config: ClientConfig) {
 
     const channel = await offerer.waitReady();
 
-    return { connection: offerer.getConnection(), channel };
+    return new WebRTCSession(offerer.getConnection(), channel);
 }
 
-export async function connectWAMP(config: ClientConfig): Promise<Session>{
-    const { connection, channel } = await connectWebRTC(config);
-    const peer = new WebRTCPeer(channel, connection);
+export async function connectWAMP(config: ClientConfig): Promise<[Session, WebRTCSession]> {
+    const webrtc = await connectWebRTC(config);
+    const peer = new WebRTCPeer(webrtc.channel, webrtc.connection);
     const baseSession = await joinPeer(peer, config.realm, config.serializer, config.authenticator);
 
-    return new Session(baseSession);
+    return [new Session(baseSession), webrtc];
 }
