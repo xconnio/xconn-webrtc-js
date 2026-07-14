@@ -5,6 +5,11 @@ import {Offerer} from "./offerer";
 import {WebRTCSession} from "./session";
 import {ClientConfig, Offer, OfferConfig, OfferResponse} from "./types";
 
+interface PendingRemoteCandidate {
+    requestID: string;
+    candidate: RTCIceCandidateInit;
+}
+
 export async function connectWebRTC(config: ClientConfig): Promise<WebRTCSession> {
     const offerer = new Offerer();
 
@@ -18,13 +23,27 @@ export async function connectWebRTC(config: ClientConfig): Promise<WebRTCSession
 
     const offer: Offer = await offerer.offer(offerConfig);
 
+    let requestID = "";
+    const pendingCandidates: PendingRemoteCandidate[] = [];
+
     await config.session.subscribe(config.topicOffererOnCandidate, async (event: Event) => {
         if (event.args.length < 2) {
             return;
         }
 
+        const candidateRequestID = event.args[0] as string;
         const candidateJSON = event.args[1];
         const candidate: RTCIceCandidateInit = JSON.parse(candidateJSON);
+
+        if (!requestID) {
+            pendingCandidates.push({requestID: candidateRequestID, candidate});
+            return;
+        }
+
+        if (candidateRequestID !== requestID) {
+            return;
+        }
+
         await offerer.addICECandidate(candidate);
     });
 
@@ -36,7 +55,17 @@ export async function connectWebRTC(config: ClientConfig): Promise<WebRTCSession
         throw new Error("Offer response request ID must not be empty");
     }
 
-    await offerer.startICETrickle(config.session, offerConfig.topicAnswererOnCandidate, offerResponse.requestID);
+    requestID = offerResponse.requestID;
+
+    const buffered = pendingCandidates.splice(0, pendingCandidates.length);
+    for (const pc of buffered) {
+        if (pc.requestID !== requestID) {
+            continue;
+        }
+        await offerer.addICECandidate(pc.candidate);
+    }
+
+    await offerer.startICETrickle(config.session, offerConfig.topicAnswererOnCandidate, requestID);
     await offerer.handleAnswer(offerResponse.answer);
 
     const channel = await offerer.waitReady();
