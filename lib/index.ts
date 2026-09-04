@@ -1,3 +1,3 @@
-export {connectWAMP, connectWebRTC} from "./webrtc"
-export {ClientConfig} from './types'
+export {connectWAMP} from "./webrtc"
+export {ClientConfig, OpenSessionConfig} from './types'
 export {WebRTCSession} from './session'

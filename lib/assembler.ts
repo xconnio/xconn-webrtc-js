@@ -1,5 +1,8 @@
 export const MTU_SIZE = 16 * 1024;
 
+// Wire framing is shared with xconn-webrtc-go's WebRTCMessageAssembler: a
+// single leading byte (1 = final chunk, 0 = more coming), no other flags —
+// keep this in sync with that implementation.
 export class MessageAssembler {
     private readonly mtu: number;
     private chunks: Uint8Array[] = [];
