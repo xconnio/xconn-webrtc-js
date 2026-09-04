@@ -1,4 +1,4 @@
-import {CBORSerializer, Session, ClientAuthenticator} from "xconn";
+import {AnonymousAuthenticator, ClientAuthenticator, JSONSerializer, Serializer, Session} from "xconn";
 
 export interface Offer {
     description: RTCSessionDescriptionInit;
@@ -28,9 +28,18 @@ export class ClientConfig {
         public readonly procedureWebRTCOffer: string,
         public readonly topicAnswererOnCandidate: string,
         public readonly topicOffererOnCandidate: string,
-        public readonly serializer: CBORSerializer,
+        public readonly serializer: Serializer,
         public readonly authenticator: ClientAuthenticator,
         public readonly session: Session,
         public readonly iceServers: RTCIceServer[],
+    ) {}
+}
+
+// Configures an additional WAMP session opened via WebRTCSession.openSession.
+export class OpenSessionConfig {
+    constructor(
+        public readonly serializer: Serializer = new JSONSerializer(),
+        public readonly authenticator: ClientAuthenticator = new AnonymousAuthenticator("", {}),
+        public readonly openTimeout = 20_000,
     ) {}
 }

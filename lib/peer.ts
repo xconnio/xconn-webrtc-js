@@ -1,4 +1,4 @@
-import { Peer } from "xconn";
+import { JSONSerializer, Peer, Serializer } from "xconn";
 
 import {MessageAssembler, MTU_SIZE} from "./assembler";
 
@@ -6,10 +6,13 @@ export class WebRTCPeer implements Peer {
     private readonly _channel: RTCDataChannel;
     private readonly _connection: RTCPeerConnection;
     private readonly _assembler: MessageAssembler;
+    // JSONSerializer works with strings, not bytes; the wire framing itself
+    // (see assembler.ts) is always raw bytes, matching xconn-webrtc-go.
+    private readonly _isText: boolean;
 
-    private readonly _messageQueue: Uint8Array[] = [];
+    private readonly _messageQueue: (Uint8Array | string)[] = [];
     private readonly _pendingReceivers: {
-        resolve: (data: Uint8Array) => void;
+        resolve: (data: Uint8Array | string) => void;
         reject: (err: Error) => void;
     }[] = [];
 
@@ -17,10 +20,11 @@ export class WebRTCPeer implements Peer {
 
     private _closed = false;
 
-    constructor(channel: RTCDataChannel, connection: RTCPeerConnection) {
+    constructor(channel: RTCDataChannel, connection: RTCPeerConnection, serializer: Serializer) {
         this._channel = channel;
         this._connection = connection;
         this._assembler = new MessageAssembler(MTU_SIZE);
+        this._isText = serializer instanceof JSONSerializer;
 
         this._bindEvents();
     }
@@ -35,13 +39,15 @@ export class WebRTCPeer implements Peer {
             const assembled = this._assembler.feed(messageBytes);
             if (!assembled) return;
 
+            const message = this._isText ? new TextDecoder().decode(assembled) : assembled;
+
             if (this._pendingReceivers.length > 0) {
                 const receiver = this._pendingReceivers.shift();
                 if (receiver) {
-                    receiver.resolve(assembled);
+                    receiver.resolve(message);
                 }
             } else {
-                this._messageQueue.push(assembled);
+                this._messageQueue.push(message);
             }
         });
 
@@ -96,13 +102,14 @@ export class WebRTCPeer implements Peer {
         );
     }
 
-    send(data: Uint8Array): void {
-        for (const chunk of this._assembler.chunkMessage(data)) {
+    send(data: Uint8Array | string): void {
+        const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+        for (const chunk of this._assembler.chunkMessage(bytes)) {
             this._channel.send(chunk.buffer as ArrayBuffer);
         }
     }
 
-    async receive(): Promise<Uint8Array> {
+    async receive(): Promise<Uint8Array | string> {
         if (this._messageQueue.length > 0) {
             const msg = this._messageQueue.shift();
             if (!msg) {
@@ -124,7 +131,6 @@ export class WebRTCPeer implements Peer {
 
         try {
             this._channel.close();
-            this._connection.close();
         } catch (error) {
             console.log(error)
         }

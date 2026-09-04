@@ -1,15 +1,19 @@
-import {Event, Session, getSubProtocol, joinPeer} from "xconn";
+import {Event} from "xconn";
 
-import {WebRTCPeer} from "./peer";
 import {Offerer} from "./offerer";
 import {WebRTCSession} from "./session";
 import {ClientConfig, Offer, OfferConfig, OfferResponse} from "./types";
 
-export async function connectWebRTC(config: ClientConfig): Promise<WebRTCSession> {
+const DEFAULT_JOIN_TIMEOUT_MS = 20_000;
+
+// Runs the offer/answer/ICE exchange and returns the resulting
+// RTCPeerConnection and its first (signaling) DataChannel, before any WAMP
+// handshake or join happens on it.
+async function connectWebRTC(config: ClientConfig): Promise<{ connection: RTCPeerConnection; channel: RTCDataChannel }> {
     const offerer = new Offerer();
 
     const offerConfig = new OfferConfig(
-        getSubProtocol(config.serializer),
+        "",
         config.iceServers,
         true,
         1,
@@ -41,13 +45,16 @@ export async function connectWebRTC(config: ClientConfig): Promise<WebRTCSession
 
     const channel = await offerer.waitReady();
 
-    return new WebRTCSession(offerer.getConnection(), channel);
+    return {connection: offerer.getConnection(), channel};
 }
 
-export async function connectWAMP(config: ClientConfig): Promise<[Session, WebRTCSession]> {
-    const webrtc = await connectWebRTC(config);
-    const peer = new WebRTCPeer(webrtc.channel, webrtc.connection);
-    const baseSession = await joinPeer(peer, config.realm, config.serializer, config.authenticator);
+// Establishes a WebRTC RTCPeerConnection and joins realm over its first
+// DataChannel, returning a WebRTCSession. Since WebRTCSession extends
+// Session, the result is immediately usable for WAMP calls, and also exposes
+// the underlying connection for opening more sessions or raw data channels
+// (see WebRTCSession.openSession / openDataChannel / onDataChannel).
+export async function connectWAMP(config: ClientConfig): Promise<WebRTCSession> {
+    const {connection, channel} = await connectWebRTC(config);
 
-    return [new Session(baseSession), webrtc];
+    return WebRTCSession.join(connection, channel, config.realm, config.serializer, config.authenticator, DEFAULT_JOIN_TIMEOUT_MS);
 }
